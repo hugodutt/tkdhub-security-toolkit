@@ -23,7 +23,7 @@ const UrlDedupePage = () => {
       const urlList = urls.split("\n").filter(url => url.trim() !== "").map(url => url.trim());
       const groupedUrls: Record<string, string[]> = {};
       
-      // Função simplificada para extrair base domain (simulando a API)
+      // Função para extrair base domain
       urlList.forEach(url => {
         try {
           let formattedUrl = url;
@@ -47,12 +47,15 @@ const UrlDedupePage = () => {
         }
       });
       
-      const results: DedupeResult[] = Object.entries(groupedUrls).map(([base, urls]) => ({
-        base,
-        urls
-      }));
+      // Filtrar apenas grupos com mais de uma URL (duplicados)
+      const filteredResults: DedupeResult[] = Object.entries(groupedUrls)
+        .filter(([_, urls]) => urls.length > 1)
+        .map(([base, urls]) => ({
+          base,
+          urls
+        }));
       
-      setResults(results);
+      setResults(filteredResults);
       setIsLoading(false);
     }, 1500);
   };
