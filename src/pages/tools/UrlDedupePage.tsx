@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Link2, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DedupeResult {
   base: string;
@@ -12,6 +13,7 @@ const UrlDedupePage = () => {
   const [urls, setUrls] = useState<string>("");
   const [results, setResults] = useState<DedupeResult[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { toast } = useToast();
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +25,7 @@ const UrlDedupePage = () => {
       const urlList = urls.split("\n").filter(url => url.trim() !== "").map(url => url.trim());
       const groupedUrls: Record<string, string[]> = {};
       
-      // Função para extrair base domain
+      // Função aprimorada para extrair base domain com maior precisão
       urlList.forEach(url => {
         try {
           let formattedUrl = url;
@@ -32,10 +34,25 @@ const UrlDedupePage = () => {
           }
           
           const urlObj = new URL(formattedUrl);
-          const hostParts = urlObj.hostname.split('.');
-          const baseDomain = hostParts.length >= 2 
-            ? hostParts.slice(-2).join('.') 
-            : urlObj.hostname;
+          const hostname = urlObj.hostname;
+          
+          // Extrai o domínio base - pega o domínio completo sem subdomínios www
+          let baseDomain = hostname;
+          
+          // Remove www. se presente
+          if (baseDomain.startsWith('www.')) {
+            baseDomain = baseDomain.substring(4);
+          }
+          
+          // Para domínios que compartilham TLDs comuns como vercel.app, precisamos incluir o subdomínio
+          // para identificar corretamente os duplicados (ex: hugo.vercel.app != trace.vercel.app)
+          if (baseDomain.includes('.vercel.app') || 
+              baseDomain.includes('.netlify.app') || 
+              baseDomain.includes('.herokuapp.com') ||
+              baseDomain.includes('.github.io')) {
+            // Manter o subdomínio nesses casos
+            baseDomain = hostname;
+          }
           
           if (!groupedUrls[baseDomain]) {
             groupedUrls[baseDomain] = [];
@@ -44,10 +61,15 @@ const UrlDedupePage = () => {
           groupedUrls[baseDomain].push(url);
         } catch (error) {
           console.error(`Erro ao processar URL: ${url}`, error);
+          toast({
+            title: "Erro ao processar URL",
+            description: `Não foi possível processar: ${url}`,
+            variant: "destructive"
+          });
         }
       });
       
-      // Filtrar apenas grupos com mais de uma URL (duplicados)
+      // Filtrar apenas grupos com mais de uma URL (duplicados exatos)
       const filteredResults: DedupeResult[] = Object.entries(groupedUrls)
         .filter(([_, urls]) => urls.length > 1)
         .map(([base, urls]) => ({
@@ -57,6 +79,18 @@ const UrlDedupePage = () => {
       
       setResults(filteredResults);
       setIsLoading(false);
+      
+      if (filteredResults.length === 0) {
+        toast({
+          title: "Nenhum duplicado encontrado",
+          description: "Não foram encontradas URLs duplicadas na lista fornecida."
+        });
+      } else {
+        toast({
+          title: `${filteredResults.length} grupo(s) de duplicados encontrados`,
+          description: "Veja os resultados ao lado."
+        });
+      }
     }, 1500);
   };
   
