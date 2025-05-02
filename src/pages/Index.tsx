@@ -1,5 +1,4 @@
 
-import { Link } from "react-router-dom";
 import { 
   Link2, 
   Mail, 
@@ -52,11 +51,6 @@ const Index = () => {
             <p className="text-xl text-muted-foreground mb-8">
               Hub de ferramentas de segurança e diagnóstico web
             </p>
-            <div className="bg-secondary/30 rounded-lg p-4 inline-block">
-              <p className="text-muted-foreground">
-                Todas as ferramentas são de uso gratuito e não necessitam de login
-              </p>
-            </div>
           </div>
         </section>
         
@@ -78,24 +72,11 @@ const Index = () => {
       
       <footer className="bg-card mt-auto py-8">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Shield className="w-6 h-6 text-primary" />
-              <span className="text-lg font-bold">TKDHub</span>
-            </div>
-            <div className="flex space-x-6">
-              <Link to="/" className="text-foreground/80 hover:text-primary transition-colors">
-                Ferramentas
-              </Link>
-              <Link to="/about" className="text-foreground/80 hover:text-primary transition-colors">
-                Sobre
-              </Link>
-              <Link to="/contact" className="text-foreground/80 hover:text-primary transition-colors">
-                Contato
-              </Link>
-            </div>
+          <div className="flex items-center justify-center mb-4">
+            <Shield className="w-6 h-6 text-primary mr-2" />
+            <span className="text-lg font-bold">TKDHub</span>
           </div>
-          <div className="mt-6 border-t border-secondary pt-6 text-center text-sm text-foreground/60">
+          <div className="text-center text-sm text-foreground/60">
             &copy; {new Date().getFullYear()} TKDHub. Todos os direitos reservados.
           </div>
         </div>

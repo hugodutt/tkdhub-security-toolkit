@@ -8,8 +8,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Pages
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import AboutPage from "./pages/AboutPage";
-import ContactPage from "./pages/ContactPage";
 import UrlDedupePage from "./pages/tools/UrlDedupePage";
 import EmailCheckPage from "./pages/tools/EmailCheckPage";
 import WhoisPage from "./pages/tools/WhoisPage";
@@ -25,8 +23,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
           <Route path="/tools/url-dedupe" element={<UrlDedupePage />} />
           <Route path="/tools/email-check" element={<EmailCheckPage />} />
           <Route path="/tools/whois" element={<WhoisPage />} />

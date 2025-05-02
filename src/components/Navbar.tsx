@@ -19,12 +19,6 @@ const Navbar = () => {
           <Link to="/" className="text-foreground hover:text-primary transition-colors">
             Ferramentas
           </Link>
-          <Link to="/about" className="text-foreground hover:text-primary transition-colors">
-            Sobre
-          </Link>
-          <Link to="/contact" className="text-foreground hover:text-primary transition-colors">
-            Contato
-          </Link>
         </div>
 
         {/* Mobile Navigation Toggle */}
@@ -46,20 +40,6 @@ const Navbar = () => {
               onClick={() => setIsOpen(false)}
             >
               Ferramentas
-            </Link>
-            <Link 
-              to="/about" 
-              className="text-foreground hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Sobre
-            </Link>
-            <Link 
-              to="/contact" 
-              className="text-foreground hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Contato
             </Link>
           </div>
         </div>
