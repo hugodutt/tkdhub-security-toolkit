@@ -1,10 +1,19 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Pages
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import UrlDedupePage from "./pages/tools/UrlDedupePage";
+import EmailCheckPage from "./pages/tools/EmailCheckPage";
+import WhoisPage from "./pages/tools/WhoisPage";
+import ChatbotPage from "./pages/tools/ChatbotPage";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +25,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/tools/url-dedupe" element={<UrlDedupePage />} />
+          <Route path="/tools/email-check" element={<EmailCheckPage />} />
+          <Route path="/tools/whois" element={<WhoisPage />} />
+          <Route path="/tools/chatbot" element={<ChatbotPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
