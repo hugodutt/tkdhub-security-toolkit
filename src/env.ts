@@ -1,3 +1,4 @@
+// Comentário para forçar novo deploy no Vercel
 export const env = {
   VITE_WHOISJSON_API_KEY: import.meta.env.VITE_WHOISJSON_API_KEY,
   VITE_APILAYER_API_KEY: import.meta.env.VITE_APILAYER_API_KEY,
