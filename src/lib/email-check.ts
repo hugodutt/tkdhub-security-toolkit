@@ -37,7 +37,7 @@ export interface BouncerResponse {
 export async function verifyEmail(email: string, timeout: number = 10): Promise<BouncerResponse> {
   try {
     // Log da URL completa e headers
-    const url = `https://api.usebouncer.com/v1.1/email/verify?email=${encodeURIComponent(email)}&timeout=${timeout}`;
+    const url = `/api/email-checker?email=${encodeURIComponent(email)}&timeout=${timeout}`;
     console.log('URL da chamada:', url);
     
     const options = {
