@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
-import { Globe, ArrowRight, Calendar, Database, Server, Shield, Loader2 } from "lucide-react";
+import { Globe, ArrowRight, Calendar, Database, Server, Shield, Loader2, Cloud } from "lucide-react";
+import { getWhoisInfo, getIPInfo } from "@/lib/domain-info";
 
 interface WhoisResult {
   domain: string;
@@ -16,7 +16,20 @@ interface WhoisResult {
     organization?: string;
     country?: string;
   };
+  ipInfo?: {
+    ip: string;
+    asn: string;
+    provider: string;
+    country: string;
+    city: string;
+    abuse_contact: {
+      email: string;
+      phone: string;
+    };
+  };
+  dnsInfo?: any;
   error?: string;
+  rawWhois: any;
 }
 
 const WhoisPage = () => {
@@ -25,102 +38,81 @@ const WhoisPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     setIsLoading(true);
     setResults(null);
     setSelectedDomain(null);
     
-    // Simular uma chamada à API
-    setTimeout(() => {
-      const domainList = domains.split("\n").filter(domain => domain.trim() !== "").map(domain => domain.trim());
-      
-      const mockResults: WhoisResult[] = domainList.map(domain => {
-        // Remover http://, https://, www. para extrair apenas o domínio
-        const cleanDomain = domain.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0];
-        
-        // Validação básica de formato de domínio
-        const isValidFormat = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/.test(cleanDomain);
-        
-        if (!isValidFormat) {
-          return {
-            domain: cleanDomain,
-            registrar: "",
-            createdDate: "",
-            expiryDate: "",
-            updatedDate: "",
-            nameServers: [],
-            status: [],
-            error: "Formato de domínio inválido"
-          };
-        }
-        
-        // Simulando diferentes resultados para demonstração
-        const now = new Date();
-        const createdDate = new Date(now.setFullYear(now.getFullYear() - Math.floor(Math.random() * 10) - 1));
-        const expiryDate = new Date(now.setFullYear(now.getFullYear() + Math.floor(Math.random() * 10) + 1));
-        const updatedDate = new Date(now.setMonth(now.getMonth() - Math.floor(Math.random() * 11)));
-        
-        const registrars = [
-          "GoDaddy.com, LLC",
-          "NameCheap, Inc.",
-          "Amazon Registrar, Inc.",
-          "Google LLC",
-          "Registro.br"
-        ];
-        
-        const nameServers = [
-          [`ns1.${cleanDomain}`, `ns2.${cleanDomain}`],
-          ["dns1.registrar-servers.com", "dns2.registrar-servers.com"],
-          ["ns-1234.awsdns-26.org", "ns-567.awsdns-07.net"],
-          ["ns1.googledomains.com", "ns2.googledomains.com"]
-        ];
-        
-        const statuses = [
-          ["clientTransferProhibited", "serverDeleteProhibited"],
-          ["clientDeleteProhibited", "clientTransferProhibited"],
-          ["ok"],
-          ["serverUpdateProhibited", "clientTransferProhibited"]
-        ];
-        
-        const registrants = [
-          {
-            name: "Redacted for Privacy",
-            organization: "Privacy service",
-            country: "US"
-          },
-          {
-            name: "Domain Administrator",
-            organization: cleanDomain.split(".")[0].toUpperCase() + " Inc.",
-            country: "BR"
-          },
-          undefined
-        ];
-        
-        const randomIndex = Math.floor(Math.random() * registrars.length);
-        const nsIndex = Math.floor(Math.random() * nameServers.length);
-        const statusIndex = Math.floor(Math.random() * statuses.length);
-        const registrantIndex = Math.floor(Math.random() * registrants.length);
-        
-        return {
+    const domainList = domains.split("\n").filter(domain => domain.trim() !== "").map(domain => domain.trim());
+    const whoisResults: WhoisResult[] = [];
+    
+    for (const domain of domainList) {
+      const cleanDomain = domain.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0];
+      const isValidFormat = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/.test(cleanDomain);
+      if (!isValidFormat) {
+        whoisResults.push({
           domain: cleanDomain,
-          registrar: registrars[randomIndex],
-          createdDate: createdDate.toISOString().split("T")[0],
-          expiryDate: expiryDate.toISOString().split("T")[0],
-          updatedDate: updatedDate.toISOString().split("T")[0],
-          nameServers: nameServers[nsIndex],
-          status: statuses[statusIndex],
-          registrant: registrants[registrantIndex]
-        };
-      });
-      
-      setResults(mockResults);
-      if (mockResults.length > 0) {
-        setSelectedDomain(mockResults[0].domain);
+          registrar: "",
+          createdDate: "",
+          expiryDate: "",
+          updatedDate: "",
+          nameServers: [],
+          status: [],
+          error: "Formato de domínio inválido",
+          rawWhois: null
+        });
+        continue;
       }
-      setIsLoading(false);
-    }, 2000);
+      try {
+        // Consulta real à API de WHOIS
+        const whoisData = await getWhoisInfo(cleanDomain);
+        // Buscar IP do domínio
+        let ipInfo = undefined;
+        let dnsInfo = undefined;
+        try {
+          const dnsRes = await fetch(`https://dns.google/resolve?name=${cleanDomain}&type=A`);
+          dnsInfo = await dnsRes.json();
+          if (dnsInfo.Answer && dnsInfo.Answer.length > 0) {
+            const ip = dnsInfo.Answer[0].data;
+            ipInfo = await getIPInfo(ip);
+          }
+        } catch (err) {
+          // Ignorar erro de IP/DNS
+        }
+        whoisResults.push({
+          domain: cleanDomain,
+          registrar: whoisData.registrar || "",
+          createdDate: whoisData.creation_date || "",
+          expiryDate: whoisData.expiration_date || "",
+          updatedDate: whoisData.updated_date || "",
+          nameServers: whoisData.name_servers || [],
+          status: [],
+          ipInfo,
+          dnsInfo,
+          rawWhois: whoisData
+        });
+      } catch (error: any) {
+        whoisResults.push({
+          domain: cleanDomain,
+          registrar: "",
+          createdDate: "",
+          expiryDate: "",
+          updatedDate: "",
+          nameServers: [],
+          status: [],
+          error: error.message || "Erro ao consultar WHOIS",
+          rawWhois: null
+        });
+      }
+    }
+    
+    setResults(whoisResults);
+    if (whoisResults.length > 0) {
+      setSelectedDomain(whoisResults[0].domain);
+    }
+    setIsLoading(false);
   };
   
   const handleSelectDomain = (domain: string) => {
@@ -134,6 +126,46 @@ const WhoisPage = () => {
   
   const selectedData = getSelectedDomainData();
   
+  const registrar = selectedData && selectedData.rawWhois ? selectedData.rawWhois.registrar?.name || "Não disponível" : "Não disponível";
+  const status = selectedData && selectedData.rawWhois ? selectedData.rawWhois.status || "Não disponível" : "Não disponível";
+  const creationDate = selectedData && selectedData.rawWhois ? selectedData.rawWhois.created || "Não disponível" : "Não disponível";
+  const expirationDate = selectedData && selectedData.rawWhois ? selectedData.rawWhois.expires || "Não disponível" : "Não disponível";
+  const updatedDate = selectedData && selectedData.rawWhois ? selectedData.rawWhois.changed || "Não disponível" : "Não disponível";
+  const nameServers = selectedData && selectedData.rawWhois ? (selectedData.rawWhois.nameserver || []) : [];
+  
+  const provider = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).company?.name ||
+    (selectedData.ipInfo as any).datacenter?.datacenter ||
+    (selectedData.ipInfo as any).asn?.org ||
+    selectedData.ipInfo.provider ||
+    "Não disponível"
+  ) : "Não disponível";
+  const asn = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).asn?.asn ||
+    selectedData.ipInfo.asn ||
+    "Não disponível"
+  ) : "Não disponível";
+  const country = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).location?.country ||
+    selectedData.ipInfo.country ||
+    "Não disponível"
+  ) : "Não disponível";
+  const city = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).location?.city ||
+    selectedData.ipInfo.city ||
+    "Não disponível"
+  ) : "Não disponível";
+  const abuseEmail = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).abuse?.email ||
+    selectedData.ipInfo.abuse_contact?.email ||
+    "Não disponível"
+  ) : "Não disponível";
+  const abusePhone = selectedData && selectedData.ipInfo ? (
+    (selectedData.ipInfo as any).abuse?.phone ||
+    selectedData.ipInfo.abuse_contact?.phone ||
+    "Não disponível"
+  ) : "Não disponível";
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -145,7 +177,7 @@ const WhoisPage = () => {
             <h1 className="text-2xl font-bold">WHOIS</h1>
           </div>
           <p className="text-muted-foreground">
-            Consulte dados WHOIS de um domínio para obter informações sobre registros, datas e servidores DNS.
+            Consulte dados WHOIS de um domínio para obter informações sobre registros, datas, servidores DNS e Hosting Provider.
           </p>
         </div>
         
@@ -274,97 +306,144 @@ const WhoisPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       {/* Informações de registro */}
-                      <div className="bg-secondary/30 p-4 rounded-md">
-                        <div className="flex items-center mb-3">
-                          <Database className="h-5 w-5 text-primary mr-2" />
-                          <h4 className="font-medium">Informações de Registro</h4>
-                        </div>
-                        
-                        <div className="space-y-2 text-sm">
-                          <div className="grid grid-cols-3 gap-1">
-                            <span className="text-muted-foreground">Registrar:</span>
-                            <span className="col-span-2">{selectedData.registrar}</span>
+                      {selectedData && selectedData.rawWhois ? (
+                        <>
+                          <div className="bg-secondary/30 p-4 rounded-md">
+                            <div className="flex items-center mb-3">
+                              <Database className="h-5 w-5 text-primary mr-2" />
+                              <h4 className="font-medium">Informações de Registro</h4>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground">Registrar:</span>
+                                <span className="col-span-2">{registrar}</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground">Status:</span>
+                                <span className="col-span-2 break-all flex flex-col gap-1">
+                                  {Array.isArray(status)
+                                    ? status.map((s, i) => <span key={i}>{s}</span>)
+                                    : status}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground">Criado:</span>
+                                <span className="col-span-2">{creationDate}</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground">Expira:</span>
+                                <span className="col-span-2">{expirationDate}</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1">
+                                <span className="text-muted-foreground">Atualizado:</span>
+                                <span className="col-span-2">{updatedDate}</span>
+                              </div>
+                            </div>
                           </div>
                           
-                          {selectedData.registrant && (
-                            <>
-                              {selectedData.registrant.organization && (
+                          {/* Servidores de nome */}
+                          <div className="bg-secondary/30 p-4 rounded-md">
+                            <div className="flex items-center mb-3">
+                              <Server className="h-5 w-5 text-primary mr-2" />
+                              <h4 className="font-medium">Servidores DNS</h4>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              {nameServers.map((ns: string, idx: number) => (
+                                <div key={idx} className="py-1 px-2 bg-secondary/30 rounded">{ns}</div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Hosting Provider */}
+                          {selectedData && selectedData.ipInfo && (
+                            <div className="bg-secondary/30 p-4 rounded-md">
+                              <div className="flex items-center mb-3">
+                                <Cloud className="h-5 w-5 text-primary mr-2" />
+                                <h4 className="font-medium">Hosting Provider</h4>
+                              </div>
+                              <div className="space-y-2 text-sm">
                                 <div className="grid grid-cols-3 gap-1">
-                                  <span className="text-muted-foreground">Organização:</span>
-                                  <span className="col-span-2">{selectedData.registrant.organization}</span>
+                                  <span className="text-muted-foreground">Provedor:</span>
+                                  <span className="col-span-2">{provider}</span>
                                 </div>
-                              )}
-                              
-                              {selectedData.registrant.country && (
+                                <div className="grid grid-cols-3 gap-1">
+                                  <span className="text-muted-foreground">ASN:</span>
+                                  <span className="col-span-2">{asn}</span>
+                                </div>
                                 <div className="grid grid-cols-3 gap-1">
                                   <span className="text-muted-foreground">País:</span>
-                                  <span className="col-span-2">{selectedData.registrant.country}</span>
+                                  <span className="col-span-2">{country}</span>
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Servidores de nome */}
-                      <div className="bg-secondary/30 p-4 rounded-md">
-                        <div className="flex items-center mb-3">
-                          <Server className="h-5 w-5 text-primary mr-2" />
-                          <h4 className="font-medium">Servidores DNS</h4>
-                        </div>
-                        
-                        <div className="space-y-1 text-sm">
-                          {selectedData.nameServers.map((ns, idx) => (
-                            <div key={idx} className="py-1 px-2 bg-secondary/30 rounded">
-                              {ns}
+                                <div className="grid grid-cols-3 gap-1">
+                                  <span className="text-muted-foreground">Cidade:</span>
+                                  <span className="col-span-2">{city}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1">
+                                  <span className="text-muted-foreground">Abuse Email:</span>
+                                  <span className="col-span-2">{abuseEmail}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1">
+                                  <span className="text-muted-foreground">Abuse Phone:</span>
+                                  <span className="col-span-2">{abusePhone}</span>
+                                </div>
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-muted-foreground">Nenhum dado WHOIS disponível.</div>
+                      )}
                     </div>
                     
                     <div className="space-y-4">
                       {/* Datas importantes */}
-                      <div className="bg-secondary/30 p-4 rounded-md">
-                        <div className="flex items-center mb-3">
-                          <Calendar className="h-5 w-5 text-primary mr-2" />
-                          <h4 className="font-medium">Datas</h4>
+                      {selectedData && selectedData.rawWhois ? (
+                        <div className="bg-secondary/30 p-4 rounded-md">
+                          <div className="flex items-center mb-3">
+                            <Calendar className="h-5 w-5 text-primary mr-2" />
+                            <h4 className="font-medium">Datas</h4>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="grid grid-cols-3 gap-1">
+                              <span className="text-muted-foreground">Criado:</span>
+                              <span className="col-span-2">{creationDate}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                              <span className="text-muted-foreground">Expira:</span>
+                              <span className="col-span-2">{expirationDate}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                              <span className="text-muted-foreground">Atualizado:</span>
+                              <span className="col-span-2">{updatedDate}</span>
+                            </div>
+                          </div>
                         </div>
-                        
-                        <div className="space-y-2 text-sm">
-                          <div className="grid grid-cols-3 gap-1">
-                            <span className="text-muted-foreground">Criado:</span>
-                            <span className="col-span-2">{selectedData.createdDate}</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-1">
-                            <span className="text-muted-foreground">Expira:</span>
-                            <span className="col-span-2">{selectedData.expiryDate}</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-1">
-                            <span className="text-muted-foreground">Atualizado:</span>
-                            <span className="col-span-2">{selectedData.updatedDate}</span>
-                          </div>
-                        </div>
-                      </div>
+                      ) : (
+                        <div className="text-muted-foreground">Nenhum dado WHOIS disponível.</div>
+                      )}
                       
                       {/* Status do domínio */}
-                      <div className="bg-secondary/30 p-4 rounded-md">
-                        <div className="flex items-center mb-3">
-                          <Shield className="h-5 w-5 text-primary mr-2" />
-                          <h4 className="font-medium">Status do Domínio</h4>
-                        </div>
-                        
-                        <div className="space-y-1 text-sm">
-                          {selectedData.status.map((status, idx) => (
-                            <div key={idx} className="py-1 px-2 bg-secondary/30 rounded flex items-center">
+                      {selectedData && selectedData.rawWhois ? (
+                        <div className="bg-secondary/30 p-4 rounded-md">
+                          <div className="flex items-center mb-3">
+                            <Shield className="h-5 w-5 text-primary mr-2" />
+                            <h4 className="font-medium">Status do Domínio</h4>
+                          </div>
+                          <div className="space-y-1 text-sm">
+                            <div className="py-1 px-2 bg-secondary/30 rounded flex items-center">
                               <span className="w-2 h-2 rounded-full bg-primary mr-2"></span>
                               {status}
                             </div>
-                          ))}
+                            {Array.isArray(status) && (status.some(s => s.toLowerCase().includes('clienthold')) || status.some(s => s.toLowerCase().includes('serverhold'))) && (
+                              <div className="mt-2 p-2 bg-yellow-500/10 text-yellow-600 rounded-md text-xs break-all">
+                                ⚠️ Este domínio está congelado e não está mais ativo. Status: {status.find(s => s.toLowerCase().includes('clienthold') || s.toLowerCase().includes('serverhold'))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="text-muted-foreground">Nenhum dado WHOIS disponível.</div>
+                      )}
                     </div>
                   </div>
                   
@@ -374,6 +453,39 @@ const WhoisPage = () => {
                       Alguns dados podem estar protegidos por políticas de privacidade.
                     </p>
                   </div>
+                </div>
+              )}
+              {selectedData && selectedData.rawWhois && (
+                <div className="bg-secondary/30 p-4 rounded-md mt-4">
+                  <div className="flex items-center mb-3">
+                    <Database className="h-5 w-5 text-primary mr-2" />
+                    <h4 className="font-medium">Dados completos do WHOIS (JSON)</h4>
+                  </div>
+                  <pre className="text-xs bg-background text-foreground p-3 rounded overflow-x-auto border border-border">
+                    {JSON.stringify(selectedData.rawWhois, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {selectedData && selectedData.ipInfo && (
+                <div className="bg-secondary/30 p-4 rounded-md mt-4">
+                  <div className="flex items-center mb-3">
+                    <Cloud className="h-5 w-5 text-primary mr-2" />
+                    <h4 className="font-medium">Dados completos do Hosting Provider (JSON)</h4>
+                  </div>
+                  <pre className="text-xs bg-background text-foreground p-3 rounded overflow-x-auto border border-border">
+                    {JSON.stringify(selectedData.ipInfo, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {selectedData && selectedData.dnsInfo && (
+                <div className="bg-secondary/30 p-4 rounded-md mt-4">
+                  <div className="flex items-center mb-3">
+                    <Server className="h-5 w-5 text-primary mr-2" />
+                    <h4 className="font-medium">Dados completos do DNS (JSON)</h4>
+                  </div>
+                  <pre className="text-xs bg-background text-foreground p-3 rounded overflow-x-auto border border-border">
+                    {JSON.stringify(selectedData.dnsInfo, null, 2)}
+                  </pre>
                 </div>
               )}
             </div>

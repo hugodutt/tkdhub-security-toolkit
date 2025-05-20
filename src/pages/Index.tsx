@@ -1,10 +1,10 @@
-
 import { 
   Link2, 
   Mail, 
   Globe, 
   MessageSquare,
-  Shield
+  Shield,
+  FileText
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ToolCard from "@/components/ToolCard";
@@ -34,6 +34,12 @@ const Index = () => {
       description: "Interaja com um chatbot de segurança para solucionar dúvidas e receber orientações sobre segurança web.",
       icon: <MessageSquare size={24} />,
       path: "/tools/chatbot"
+    },
+    {
+      title: "Gerador de Templates",
+      description: "Gere templates profissionais de emails para remoção de conteúdo, personalizados para cada caso.",
+      icon: <FileText size={24} />,
+      path: "/tools/template-generator"
     }
   ];
 

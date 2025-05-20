@@ -1,7 +1,7 @@
-
 import { useState, useRef, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { MessageCircle, Send, Bot, Loader2, User, RefreshCcw } from "lucide-react";
+import { generateResponse } from "@/lib/gemini";
 
 interface Message {
   id: string;
@@ -14,7 +14,7 @@ const ChatbotPage = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Olá! Sou o assistente de segurança do TKDHub. Como posso ajudar você com segurança web ou diagnóstico hoje?",
+      text: "Olá! Sou o assistente de segurança do TKDHub, agora com o poder do Gemini. Como posso ajudar você com segurança web ou diagnóstico hoje?",
       sender: "bot",
       timestamp: new Date()
     }
@@ -31,7 +31,7 @@ const ChatbotPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
     
@@ -47,64 +47,11 @@ const ChatbotPage = () => {
     setInput("");
     setIsLoading(true);
     
-    // Simular resposta do bot após um delay
-    setTimeout(() => {
-      const botResponses: Record<string, string[]> = {
-        "segurança": [
-          "A segurança web envolve vários aspectos, incluindo HTTPS, Headers de segurança, proteção contra XSS e CSRF, e autenticação robusta. Qual aspecto você gostaria de explorar mais?",
-          "Recomendo algumas práticas essenciais de segurança: utilizar HTTPS, implementar CSP (Content Security Policy), manter bibliotecas atualizadas e realizar testes de penetração regularmente."
-        ],
-        "ssl": [
-          "Certificados SSL/TLS são essenciais para criptografar a comunicação entre o navegador e o servidor. Você pode obter certificados gratuitos através do Let's Encrypt ou comprar de autoridades certificadoras comerciais.",
-          "Para verificar a configuração SSL do seu site, você pode usar ferramentas como SSL Labs ou Mozilla Observatory."
-        ],
-        "senha": [
-          "Para senhas seguras, recomendo: mínimo de 12 caracteres, combinação de letras (maiúsculas e minúsculas), números e símbolos, e implementação de autenticação de dois fatores (2FA).",
-          "Evite armazenar senhas em texto plano, sempre utilize algoritmos de hash seguros como bcrypt ou Argon2 com salt adequado."
-        ],
-        "xss": [
-          "A vulnerabilidade XSS (Cross-Site Scripting) ocorre quando uma aplicação web permite que código JavaScript malicioso seja injetado e executado. Para prevenir, escape ou sanitize inputs e implemente o header Content-Security-Policy.",
-          "Existem três tipos principais de XSS: Reflected, Stored e DOM-based. Cada um exige diferentes estratégias de mitigação."
-        ],
-        "sql": [
-          "Para prevenir SQL Injection, utilize consultas parametrizadas ou prepared statements, nunca concatene strings SQL diretamente com inputs do usuário.",
-          "ORMs (Object-Relational Mappings) como Sequelize, Prisma ou TypeORM podem ajudar a prevenir SQL Injection automaticamente."
-        ],
-        "api": [
-          "Para APIs seguras, recomendo: autenticação via JWT ou OAuth2, rate limiting, validação de inputs, CORS configurado corretamente e documentação com OpenAPI/Swagger.",
-          "Considere implementar API keys para identificação de clientes e tokens JWT com tempo de expiração curto para autenticação."
-        ],
-        "malware": [
-          "Para detectar malware em seu site, utilize ferramentas como Google Safe Browsing, Sucuri SiteCheck ou ClamAV para varreduras regulares.",
-          "Sinais de comprometimento incluem redirecionamentos inesperados, scripts desconhecidos, arquivos modificados e quedas de desempenho."
-        ],
-        "firewall": [
-          "Um WAF (Web Application Firewall) ajuda a proteger aplicações web contra ataques comuns como XSS, SQLi e DDoS. Soluções populares incluem Cloudflare, AWS WAF e ModSecurity.",
-          "Configure regras personalizadas em seu WAF com base nos padrões de tráfego específicos da sua aplicação."
-        ],
-        "oi": [
-          "Olá! Como posso ajudar você hoje com segurança web ou diagnóstico?",
-          "Oi! Estou aqui para responder suas dúvidas sobre segurança e ferramentas de diagnóstico. O que gostaria de saber?"
-        ]
-      };
-      
-      // Encontrar palavras-chave na mensagem do usuário
-      const userInput = input.toLowerCase();
-      let botResponse = "Não tenho informações específicas sobre isso, mas posso ajudar com questões de segurança web, SSL/TLS, senhas seguras, proteção contra XSS e SQL injection, configuração de APIs, detecção de malware e firewalls. Pergunte-me sobre esses tópicos!";
-      
-      // Procurar palavras-chave e selecionar respostas relevantes
-      for (const [keyword, responses] of Object.entries(botResponses)) {
-        if (userInput.includes(keyword)) {
-          const randomIndex = Math.floor(Math.random() * responses.length);
-          botResponse = responses[randomIndex];
-          break;
-        }
-      }
-      
-      // Processa mensagens específicas sobre ferramentas
-      if (userInput.includes("ferramenta") || userInput.includes("tool")) {
-        botResponse = "O TKDHub oferece diversas ferramentas de segurança e diagnóstico web, incluindo URL Dedupe para identificar URLs duplicadas, Email Checker para verificar validade de emails, WHOIS para consultar informações de domínios, e este Chatbot para tirar suas dúvidas sobre segurança web.";
-      }
+    try {
+      console.log("Iniciando geração de resposta para:", input);
+      // Gerar resposta usando o Gemini
+      const botResponse = await generateResponse(input);
+      console.log("Resposta recebida:", botResponse);
       
       // Adicionar resposta do bot
       const botMessage: Message = {
@@ -115,15 +62,25 @@ const ChatbotPage = () => {
       };
       
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Erro detalhado no handleSubmit:", error);
+      const errorMessage: Message = {
+        id: `bot-${Date.now()}`,
+        text: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
+        sender: "bot",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   
   const handleReset = () => {
     setMessages([
       {
         id: "welcome",
-        text: "Olá! Sou o assistente de segurança do TKDHub. Como posso ajudar você com segurança web ou diagnóstico hoje?",
+        text: "Olá! Sou o assistente de segurança do TKDHub, agora com o poder do Gemini. Como posso ajudar você com segurança web ou diagnóstico hoje?",
         sender: "bot",
         timestamp: new Date()
       }

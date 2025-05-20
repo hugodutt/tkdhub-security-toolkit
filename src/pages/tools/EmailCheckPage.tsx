@@ -1,17 +1,17 @@
-
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { Mail, ArrowRight, Check, X, AlertCircle, Loader2 } from "lucide-react";
+import { verifyEmail, BouncerResponse } from "@/lib/email-check";
 
 interface EmailCheckResult {
   email: string;
-  status: "valid" | "invalid" | "unknown";
+  status: "deliverable" | "undeliverable" | "risky" | "unknown";
   info: {
-    format?: boolean;
-    domain?: boolean;
-    mx?: boolean;
-    disposable?: boolean;
-    smtp?: boolean;
+    format: boolean;
+    domain: boolean;
+    mx: boolean;
+    disposable: boolean;
+    smtp: boolean;
     message?: string;
   };
 }
@@ -21,91 +21,67 @@ const EmailCheckPage = () => {
   const [results, setResults] = useState<EmailCheckResult[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     setIsLoading(true);
+    setResults(null);
     
-    // Simular uma chamada à API
-    setTimeout(() => {
-      const emailList = emails.split("\n").filter(email => email.trim() !== "").map(email => email.trim());
+    try {
+      const emailList = emails.split("\n")
+        .filter(email => email.trim() !== "")
+        .map(email => email.trim());
       
-      const mockResults: EmailCheckResult[] = emailList.map(email => {
-        // Validação básica de formato
-        const isValidFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        
-        // Simulando diferentes resultados para demonstração
-        if (!isValidFormat) {
-          return {
-            email,
-            status: "invalid",
-            info: {
-              format: false,
-              message: "Formato de email inválido"
-            }
-          };
-        }
-        
-        // Extrair domínio
-        const domain = email.split('@')[1];
-        
-        // Simular verificações para domínios conhecidos
-        if (domain === "gmail.com" || domain === "outlook.com" || domain === "yahoo.com") {
-          return {
-            email,
-            status: "valid",
-            info: {
-              format: true,
-              domain: true,
-              mx: true,
-              disposable: false,
-              smtp: true
-            }
-          };
-        }
-        
-        // Simular domínios temporários
-        if (domain === "tempmail.com" || domain === "10minutemail.com") {
-          return {
-            email,
-            status: "valid",
-            info: {
-              format: true,
-              domain: true,
-              mx: true,
-              disposable: true,
-              smtp: true,
-              message: "Email temporário detectado"
-            }
-          };
-        }
-        
-        // Domínio desconhecido ou outros casos
-        return {
-          email,
-          status: Math.random() > 0.3 ? "valid" : "unknown",
-          info: {
-            format: true,
-            domain: Math.random() > 0.5,
-            mx: Math.random() > 0.5,
-            disposable: false,
-            smtp: Math.random() > 0.5,
-            message: Math.random() > 0.7 ? "Verificação SMTP inconclusiva" : undefined
+      const checkResults = await Promise.all(
+        emailList.map(async (email) => {
+          try {
+            const response = await verifyEmail(email);
+            const result: EmailCheckResult = {
+              email,
+              status: response.status,
+              info: {
+                format: response.reason !== "invalid_email",
+                domain: response.domain?.name ? true : false,
+                mx: response.dns?.type === "MX",
+                disposable: response.domain?.disposable === "yes",
+                smtp: response.status === "deliverable",
+                message: response.reason
+              }
+            };
+            return result;
+          } catch (error) {
+            const errorResult: EmailCheckResult = {
+              email,
+              status: "unknown",
+              info: {
+                format: true,
+                domain: false,
+                mx: false,
+                disposable: false,
+                smtp: false,
+                message: error instanceof Error ? error.message : "Erro na verificação"
+              }
+            };
+            return errorResult;
           }
-        };
-      });
+        })
+      );
       
-      setResults(mockResults);
+      setResults(checkResults);
+    } catch (error) {
+      console.error("Erro ao verificar emails:", error);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
   
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "valid":
+      case "deliverable":
         return <Check className="h-4 w-4 text-green-500" />;
-      case "invalid":
+      case "undeliverable":
         return <X className="h-4 w-4 text-red-500" />;
+      case "risky":
       case "unknown":
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
       default:
@@ -115,10 +91,12 @@ const EmailCheckPage = () => {
   
   const getStatusText = (status: string) => {
     switch (status) {
-      case "valid":
+      case "deliverable":
         return "Válido";
-      case "invalid":
+      case "undeliverable":
         return "Inválido";
+      case "risky":
+        return "Risco";
       case "unknown":
         return "Inconclusivo";
       default:
@@ -128,10 +106,11 @@ const EmailCheckPage = () => {
   
   const getStatusClass = (status: string) => {
     switch (status) {
-      case "valid":
+      case "deliverable":
         return "bg-green-500/10 text-green-500";
-      case "invalid":
+      case "undeliverable":
         return "bg-red-500/10 text-red-500";
+      case "risky":
       case "unknown":
         return "bg-yellow-500/10 text-yellow-500";
       default:
