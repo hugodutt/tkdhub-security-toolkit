@@ -43,13 +43,13 @@ export async function verifyEmail(email: string, timeout: number = 10): Promise<
     const options = {
       method: 'GET',
       headers: {
-        'x-api-key': env.VITE_BOUNCER_API_KEY,
+        'x-api-key': env.VITE_EMAIL_CHECKER_API_KEY,
         'Accept': 'application/json'
       }
     };
     
     console.log('Headers enviados:', {
-      'x-api-key': env.VITE_BOUNCER_API_KEY ? 'Presente (primeiros 4 caracteres): ' + env.VITE_BOUNCER_API_KEY.substring(0, 4) : 'Ausente',
+      'x-api-key': env.VITE_EMAIL_CHECKER_API_KEY ? 'Presente (primeiros 4 caracteres): ' + env.VITE_EMAIL_CHECKER_API_KEY.substring(0, 4) : 'Ausente',
       'Accept': 'application/json'
     });
 
