@@ -18,12 +18,6 @@ const Index = () => {
       path: "/tools/url-dedupe"
     },
     {
-      title: "Email Checker",
-      description: "Verifique se um endereço de email está ativo e válido através de verificações de domínio e servidor.",
-      icon: <Mail size={24} />,
-      path: "/tools/email-check"
-    },
-    {
       title: "WHOIS",
       description: "Consulte dados WHOIS de um domínio para obter informações sobre o registrante, datas e servidores DNS.",
       icon: <Globe size={24} />,
@@ -54,9 +48,6 @@ const Index = () => {
               <Shield className="w-12 h-12 text-primary mr-3" />
               <h1 className="text-4xl font-bold tracking-tight">TKDHub</h1>
             </div>
-            <p className="text-xl text-muted-foreground mb-8">
-              Hub de ferramentas de segurança e diagnóstico web
-            </p>
           </div>
         </section>
         
@@ -81,9 +72,6 @@ const Index = () => {
           <div className="flex items-center justify-center mb-4">
             <Shield className="w-6 h-6 text-primary mr-2" />
             <span className="text-lg font-bold">TKDHub</span>
-          </div>
-          <div className="text-center text-sm text-foreground/60">
-            &copy; {new Date().getFullYear()} TKDHub. Todos os direitos reservados.
           </div>
         </div>
       </footer>
