@@ -4,7 +4,8 @@ import {
   Globe, 
   MessageSquare,
   Shield,
-  FileText
+  FileText,
+  Calendar
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ToolCard from "@/components/ToolCard";
@@ -34,6 +35,12 @@ const Index = () => {
       description: "Gere templates profissionais de emails para remoção de conteúdo, personalizados para cada caso.",
       icon: <FileText size={24} />,
       path: "/tools/template-generator"
+    },
+    {
+      title: "Contador de Datas",
+      description: "Calcule o número de dias entre duas datas de forma simples e rápida.",
+      icon: <Calendar size={24} />,
+      path: "/tools/date-counter"
     }
   ];
 

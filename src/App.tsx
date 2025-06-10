@@ -11,6 +11,7 @@ import UrlDedupePage from "@/pages/tools/UrlDedupePage";
 import WhoisPage from "@/pages/tools/WhoisPage";
 import ChatbotPage from "@/pages/tools/ChatbotPage";
 import TemplateGeneratorPage from "@/pages/tools/TemplateGeneratorPage";
+import DateCounterPage from "@/pages/tools/DateCounterPage";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/tools/whois" element={<WhoisPage />} />
           <Route path="/tools/chatbot" element={<ChatbotPage />} />
           <Route path="/tools/template-generator" element={<TemplateGeneratorPage />} />
+          <Route path="/tools/date-counter" element={<DateCounterPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
