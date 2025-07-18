@@ -36,22 +36,37 @@ const UrlDedupePage = () => {
           const urlObj = new URL(formattedUrl);
           const hostname = urlObj.hostname;
           
-          // Extrai o domínio base - pega o domínio completo sem subdomínios www
+          // Extrai o domínio base - agora com suporte melhorado para subdomínios
           let baseDomain = hostname;
           
-          // Remove www. se presente
-          if (baseDomain.startsWith('www.')) {
-            baseDomain = baseDomain.substring(4);
-          }
+          // Lista de serviços de hospedagem onde queremos manter o subdomínio completo
+          const hostingServices = [
+            '.vercel.app',
+            '.netlify.app',
+            '.herokuapp.com',
+            '.github.io'
+          ];
           
-          // Para domínios que compartilham TLDs comuns como vercel.app, precisamos incluir o subdomínio
-          // para identificar corretamente os duplicados (ex: hugo.vercel.app != trace.vercel.app)
-          if (baseDomain.includes('.vercel.app') || 
-              baseDomain.includes('.netlify.app') || 
-              baseDomain.includes('.herokuapp.com') ||
-              baseDomain.includes('.github.io')) {
-            // Manter o subdomínio nesses casos
-            baseDomain = hostname;
+          // Verifica se é um serviço de hospedagem
+          const isHostingService = hostingServices.some(service => hostname.includes(service));
+          
+          if (!isHostingService) {
+            // Remove www. se presente
+            if (baseDomain.startsWith('www.')) {
+              baseDomain = baseDomain.substring(4);
+            }
+            
+            // Extrai o domínio principal de qualquer subdomínio
+            const parts = baseDomain.split('.');
+            if (parts.length > 2) {
+              // Pega os últimos dois segmentos para domínios comuns (exemplo.com)
+              // ou os últimos três para domínios como .co.uk, .com.br
+              if (parts[parts.length - 2].length <= 3 && parts[parts.length - 1].length <= 3) {
+                baseDomain = parts.slice(-3).join('.');
+              } else {
+                baseDomain = parts.slice(-2).join('.');
+              }
+            }
           }
           
           if (!groupedUrls[baseDomain]) {
